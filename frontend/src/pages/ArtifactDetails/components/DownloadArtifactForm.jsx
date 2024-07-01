@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import { Stack, Paper, InputLabel, Select } from "@mui/material";
+import { Stack, Paper, InputLabel, Select, MenuItem } from "@mui/material";
 import { useSnackBars } from "../../../hooks/useSnackbars";
-
+import { API_URLS } from "../../../api";
+import AutocompleteExtended from "../../sharedComponents/AutocompleteExtended";
 const DownloadArtifactForm = ({ artifactInfo, handleClose }) => {
+  const [institutions, setInstitutions] = useState([]);
   const { addAlert } = useSnackBars();
   const [formValues, setFormValues] = useState({
     fullName: "",
@@ -17,6 +19,18 @@ const DownloadArtifactForm = ({ artifactInfo, handleClose }) => {
     description: "",
   });
 
+  useEffect(() => {
+    fetch(API_URLS.INSTITUTIONS)
+      .then((response) => response.json())
+      .then((data) => {
+        // Update the state with the fetched institutions
+        setInstitutions(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching institutions:", error);
+      });
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormValues({
@@ -25,56 +39,36 @@ const DownloadArtifactForm = ({ artifactInfo, handleClose }) => {
     });
   };
 
-  const downloadFile = (resourceBlob, downloadName) => {
-    const url = URL.createObjectURL(resourceBlob);
-    var link = document.createElement("a");
-    link.href = url;
-    link.download = downloadName;
-    link.click();
-    link.remove();
-  };
-
-  const handleDownload = () => {
-    // metadata
-    const jsonObj = {
-      attributes: artifactInfo.attributes,
-    };
-    const jsonStr = JSON.stringify(jsonObj);
-    const jsonBlob = new Blob([jsonStr], { type: "application/json" });
-    downloadFile(jsonBlob, "metadata.json");
-
-    // model
-    fetch(artifactInfo.model.object)
-      .then((response) => response.blob())
-      .then((response) =>
-        downloadFile(response, artifactInfo.model.object.split("/").pop())
-      );
-    fetch(artifactInfo.model.material)
-      .then((response) => response.blob())
-      .then((response) =>
-        downloadFile(response, artifactInfo.model.material.split("/").pop())
-      );
-
-    fetch(artifactInfo.model.texture)
-      .then((response) => response.blob())
-      .then((response) =>
-        downloadFile(response, artifactInfo.model.texture.split("/").pop())
-      );
-
-    //images
-    artifactInfo.images.map((image, index) => {
-      fetch(image)
-        .then((response) => response.blob())
-        .then((response) => downloadFile(response, image.split("/").pop()));
-      return null;
-    });
+  const handleDownload = (formValues) => {
+    console.log(formValues)
+    fetch(API_URLS.DETAILED_ARTIFACT + "/" + artifactInfo.id + "/download", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formValues),
+    })
+      .then((response) => {
+        response.blob().then((blob) => {
+          const url = window.URL.createObjectURL(new Blob([blob]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `artifact_${artifactInfo.id}.zip`
+          link.click()
+          link.remove()
+        }
+        )
+      })
+      .catch((error) => {
+        console.error("Error downloading artifact:", error);
+      });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Request sent to the server", formValues);
     addAlert("¡Solicitud enviada con éxito! La descarga comenzará pronto.");
-    handleDownload();
+    handleDownload(formValues);
     handleClose();
   };
 
@@ -133,17 +127,27 @@ const DownloadArtifactForm = ({ artifactInfo, handleClose }) => {
             />
           </Stack>
           <Stack>
-            <InputLabel>
+            {/* <InputLabel>
               <b>Institución *</b>
             </InputLabel>
-            <Select
-              // required
+            <AutocompleteExtended
+              required
               id="institution"
               name="institution"
               label="Institucion"
-              value={formValues.institution}
+              value={formValues.institution.name}
+              options={institutions}
+              setValue={}
+              getOptionLabel={(option) => option.name}
+              onChange={(event, newValue) => {
+                // setFormValues({
+                  ...formValues,
+                  institution: newValue ? newValue.id : "",
+                });
+              }}
             />
-          </Stack>
+             */}
+          </Stack> 
           <Stack>
             <InputLabel>
               <b>Motivo de solicitud (Opcional)</b>

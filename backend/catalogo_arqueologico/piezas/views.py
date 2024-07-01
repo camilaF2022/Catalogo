@@ -11,8 +11,11 @@ from .serializers import (
     ShapeSerializer,
     TagSerializer,
     CultureSerializer,
+    RequesterSerializer
 )
-from .models import Artifact, Institution, Image, Shape, Tag, Culture, Model, Thumbnail
+from .permissions import IsFuncionarioPermission , IsAuthenticatedOrProvidesData
+from rest_framework.permissions import IsAuthenticated 
+from .models import Artifact, Institution, Image, Shape, Tag, Culture, Requester, Model, Thumbnail
 from rest_framework.response import Response
 from django.db.models import Q
 from django.core.files import File
@@ -28,8 +31,7 @@ logger = logging.getLogger(__name__)
 class ArtifactDetailAPIView(generics.RetrieveAPIView):
     queryset = Artifact.objects.all()
     serializer_class = ArtifactSerializer
-
-
+    
 class MetadataListAPIView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         shapes = Shape.objects.all()
@@ -59,13 +61,27 @@ class ArtifactDestroyAPIView(generics.DestroyAPIView):
     queryset = Artifact.objects.all()
     serializer_class = ArtifactSerializer
     lookup_field = "pk"
+    permission_classes = [IsAuthenticated]
 
-
-class ArtifactDownloadAPIView(generics.RetrieveAPIView):
+    
+class ArtifactDownloadAPIView(generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Artifact.objects.all()
     serializer_class = ArtifactSerializer
     lookup_field = "pk"
-
+    permission_classes = [IsAuthenticatedOrProvidesData]
+    
+    def post(self, request, *args, **kwargs):
+        requester = Requester.objects.create(
+        name=request.data.get("fullName"),
+        rut=request.data.get("rut"),
+        email=request.data.get("email"),
+        is_registered=False,
+        # institution=institution,  # 
+        artifact=Artifact.objects.get(pk=kwargs.get("pk"))
+    )
+        serializer = RequesterSerializer(requester)
+        return Response({"status": "HTTP_OK", "data": serializer.data})
+        
     def get(self, request, *args, **kwargs):
         pk = kwargs.get("pk")
         if pk is not None:
@@ -125,7 +141,7 @@ class CustomPageNumberPagination(PageNumberPagination):
 class CatalogAPIView(generics.ListAPIView):
     serializer_class = CatalogSerializer
     pagination_class = CustomPageNumberPagination
-
+    
     def get_queryset(self):
         queryset = Artifact.objects.all().order_by("id")
 
@@ -169,6 +185,7 @@ class ArtifactCreateUpdateAPIView(generics.GenericAPIView):
     queryset = Artifact.objects.all()
     serializer_class = UpdateArtifactSerializer
     lookup_field = "pk"
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         pk = self.kwargs.get("pk")
@@ -333,3 +350,4 @@ class InstitutionDetailAPIView(generics.RetrieveAPIView):
     queryset = Institution.objects.all()
     serializer_class = InstitutionSerializer
     lookup_field = "pk"
+

@@ -1,17 +1,15 @@
 from django.db import models
 from django.core.files.storage import FileSystemStorage
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import User
 
 from django.conf import settings
 
-
-class CustomStorage(FileSystemStorage):
-    def get_available_name(self, name, max_length=None):
-        if self.exists(name):
-            self.delete(name)
-        return name
+User._meta.get_field('email')._unique = True
+User._meta.get_field('email').blank = False
+User._meta.get_field('email').null = False
 
 
-# Create your models here.
 class Shape(models.Model):
     """
     Shape model to store the shapes of the artifacts
@@ -160,6 +158,22 @@ class Institution(models.Model):
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
 
+    
+class Requester(models.Model):
+    """
+    Requester model to store the information of the users making requests
+    """
+    id = models.BigAutoField(primary_key=True)
+    name = models.CharField(max_length=50)
+    rut = models.CharField(max_length=50)
+    email = models.EmailField()
+    is_registered = models.BooleanField(default=True)
+    # institution = models.ForeignKey(
+    #     Institution, on_delete=models.CASCADE, related_name="requesters"
+    # )
+    artifact = models.ForeignKey(
+        Artifact, on_delete=models.CASCADE, related_name="requesters"
+    )
 
 """
 class Solicitud(models.Model):

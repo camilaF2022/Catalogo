@@ -46,6 +46,26 @@ const ArtifactDetails = () => {
     });
   };
 
+  const handleDownload = () => {    
+    fetch(API_URLS.DETAILED_ARTIFACT + "/" + artifact.id + "/download"
+    , { headers: { Authorization: `Token ${token}` } }
+      )
+      .then((response) => {
+        response.blob().then((blob) => {
+          const url = window.URL.createObjectURL(new Blob([blob]));
+          const link = document.createElement("a");
+          link.href=url;
+          link.download= `artifact_${artifact.id}.zip` 
+          link.click()
+          link.remove()
+        }
+      )})
+      .catch((error) => {
+        console.error("Error downloading artifact:", error);
+      });
+  };
+
+  
   useEffect(() => {
     fetch(`${API_URLS.DETAILED_ARTIFACT}/${artifactId}`)
       .then((response) => {
@@ -71,12 +91,10 @@ const ArtifactDetails = () => {
         <ContainerGrid>
           <LeftBox>
             <CustomContainer>
-              <Typography variant="h3">
-                <b>{artifact.id}</b>
-              </Typography>
+              {artifact.id? <Typography variant="h3">Pieza {artifact.id}</Typography> : <div></div>}
               {loggedIn ? (
                 <HorizontalStack>
-                  <Button variant="contained">Descargar Pieza</Button>
+                  <Button variant="contained" onClick={handleDownload}>Descargar Pieza</Button>
                   <Button variant="contained" onClick={handleRedirect}>
                     Editar Pieza
                   </Button>
@@ -186,7 +204,7 @@ const LeftBox = styled("div")(({ theme }) => ({
 
 const RightBox = styled("div")(({ theme }) => ({
   padding: theme.spacing(1),
-  paddingTop: theme.spacing(3),
+  paddingTop: theme.spacing(5),
   paddingBottom: theme.spacing(3),
   backgroundColor: "#fff",
   [theme.breakpoints.down("md")]: {
@@ -197,9 +215,9 @@ const RightBox = styled("div")(({ theme }) => ({
     width: theme.spacing(104.5),
   },
   [theme.breakpoints.up("lg")]: {
+    height: theme.spacing(67),
     marginTop: theme.spacing(8),
     width: theme.spacing(28),
-    height: theme.spacing(69),
     gap: theme.spacing(1.7),
   },
   [theme.breakpoints.up("xl")]: {
